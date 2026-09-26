@@ -217,7 +217,11 @@ macro_rules! activation_heights_mirror {
                 upgrade: zebra_chain::parameters::NetworkUpgrade,
             ) -> Option<&mut Option<u32>> {
                 match upgrade {
-                    zebra_chain::parameters::NetworkUpgrade::Genesis => None,
+                    // Genesis is height 0 by definition. SwarmMain is the SWARM
+                    // production transaction domain (`SWM1`), which the node never
+                    // reports as a schedule entry; neither has a slot.
+                    zebra_chain::parameters::NetworkUpgrade::Genesis
+                    | zebra_chain::parameters::NetworkUpgrade::SwarmMain => None,
                     $(
                         zebra_chain::parameters::NetworkUpgrade::$variant => {
                             Some(&mut self.$field)

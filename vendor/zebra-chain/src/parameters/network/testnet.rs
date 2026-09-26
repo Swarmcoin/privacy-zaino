@@ -195,6 +195,8 @@ impl From<&BTreeMap<Height, NetworkUpgrade>> for ConfiguredActivationHeights {
                 #[cfg(zcash_unstable = "zfuture")]
                 NetworkUpgrade::ZFuture => &mut configured_activation_heights.zfuture,
                 NetworkUpgrade::Genesis => continue,
+                // A transaction domain, not a schedule entry: it has no height.
+                NetworkUpgrade::SwarmMain => continue,
             };
 
             *field = Some(height.0)

@@ -64,6 +64,20 @@ pub enum NetworkUpgrade {
     /// The Zcash protocol after the NU6.3 (Ironwood) upgrade.
     #[serde(rename = "NU6.3")]
     Nu6_3,
+    /// The SWARM production consensus domain.
+    ///
+    /// Not a Zcash network upgrade, and never in any activation schedule: it is
+    /// the transaction domain every transaction on the SWARM production network
+    /// carries in `nConsensusBranchId`, `0x53574d31` (the ASCII bytes `SWM1`),
+    /// `zcash_protocol::consensus::BranchId::SwarmMain`. Without it the V5/V6
+    /// deserializer refuses every SWARM block with "invalid consensus branch id".
+    ///
+    /// It selects the NU6.3 rules, exactly as the protocol crate's
+    /// `BranchId::SwarmMain` does, and it is declared directly after `Nu6_3` so
+    /// that every "NU6.3 or later" wire check admits it and every "NU7 or later"
+    /// check does not. `activation_height` answers `None` for it on every network.
+    #[serde(rename = "SWM1")]
+    SwarmMain,
     /// The Zcash protocol after the NU7 upgrade.
     #[serde(rename = "NU7")]
     Nu7,
@@ -239,6 +253,8 @@ pub(crate) const CONSENSUS_BRANCH_IDS: &[(NetworkUpgrade, ConsensusBranchId)] = 
     (Nu6_2, ConsensusBranchId(0x5437f330)),
     // The NU6.3 (Ironwood) consensus branch id, matching zcash_protocol's `BranchId::Nu6_3`.
     (Nu6_3, ConsensusBranchId(0x37a5165b)),
+    // The SWARM production transaction domain, `SWM1`; see the variant's docs.
+    (SwarmMain, ConsensusBranchId(0x53574d31)),
     // TODO: set below to (Nu7, ConsensusBranchId(0x77190ad8)), once the same value is set in librustzcash
     #[cfg(any(test, feature = "zebra-test"))]
     (Nu7, ConsensusBranchId(0xfffffffe)),
@@ -411,7 +427,7 @@ impl NetworkUpgrade {
     pub fn target_spacing(&self) -> Duration {
         let spacing_seconds = match self {
             Genesis | BeforeOverwinter | Overwinter | Sapling => PRE_BLOSSOM_POW_TARGET_SPACING,
-            Blossom | Heartwood | Canopy | Nu5 | Nu6 | Nu6_1 | Nu6_2 | Nu6_3 | Nu7 => {
+            Blossom | Heartwood | Canopy | Nu5 | Nu6 | Nu6_1 | Nu6_2 | Nu6_3 | SwarmMain | Nu7 => {
                 POST_BLOSSOM_POW_TARGET_SPACING.into()
             }
 

@@ -159,6 +159,36 @@ fn activation_consistent(network: Network) {
 }
 
 /// Check that the network upgrades and branch ids are unique.
+/// The SWARM production domain is in the table, selects the NU6.3 rules'
+/// position in the order, and is never scheduled on a public network.
+#[test]
+fn swarm_production_domain_is_a_branch_id_but_not_a_schedule_entry() {
+    let _init_guard = zebra_test::init();
+
+    assert_eq!(
+        NetworkUpgrade::try_from(0x5357_4d31).expect("SWM1 is a known branch id"),
+        NetworkUpgrade::SwarmMain
+    );
+    assert_eq!(
+        NetworkUpgrade::SwarmMain.branch_id(),
+        Some(ConsensusBranchId::from(0x5357_4d31))
+    );
+    assert_eq!(
+        zcash_protocol::consensus::BranchId::try_from(ConsensusBranchId::from(0x5357_4d31))
+            .expect("the protocol crate admits SWM1"),
+        zcash_protocol::consensus::BranchId::SwarmMain
+    );
+    assert!(NetworkUpgrade::SwarmMain > NetworkUpgrade::Nu6_3);
+    assert!(NetworkUpgrade::SwarmMain < NetworkUpgrade::Nu7);
+    for network in Network::iter() {
+        assert_eq!(NetworkUpgrade::SwarmMain.activation_height(&network), None);
+        assert!(!network
+            .activation_list()
+            .values()
+            .any(|nu| *nu == NetworkUpgrade::SwarmMain));
+    }
+}
+
 #[test]
 fn branch_id_bijective() {
     let _init_guard = zebra_test::init();

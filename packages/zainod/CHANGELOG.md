@@ -14,6 +14,7 @@ and this crate adheres to Rust's notion of
 ### Deprecated
 ### Removed
 ### Fixed
+- The SWARM production indexer can read its chain: the vendored `zebra-chain` now admits the SWARM production consensus branch id `0x53574d31` (`SWM1`) that every transaction on that network carries, instead of refusing every block with "invalid consensus branch id" (see `vendor/README.md`).
 
 ## [0.10.0] - 2026-09-11
 

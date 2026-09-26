@@ -63,3 +63,24 @@ The outer workspace ignores those sections and selects the identical paths.
 
 Ported from the node worktrees `codex/mainnet-identity-encodings-20260925` (P1d,
 5a5d5b391) and `codex/mainnet-production-domain-20260925` (P1c, 6cbde4d7b).
+
+## SWARM production transaction domain in zebra-chain, 2026-09-26
+
+The vendored `zebra-chain` 12.0.0 above was patched only for the `NetworkKind`
+conversion; its V5/V6 transaction deserializer still resolved `nConsensusBranchId`
+through `NetworkUpgrade::try_from(u32)`, whose table is the published Zcash one. Every
+transaction on the SWARM production network names `0x53574d31`, so the indexer built
+from that tree refused every block with "invalid consensus branch id" and could not
+serve a single light wallet.
+
+`NetworkUpgrade` gains the variant `SwarmMain`, paired with `0x53574d31` in
+`CONSENSUS_BRANCH_IDS`. It is a transaction domain and not an upgrade: it is declared
+directly after `Nu6_3`, so it passes the "NU6.3 or later" wire check for v6 and fails
+every "NU7 or later" one, it takes the NU6.3 arm wherever the crate matches on the
+upgrade (history tree, spacing), and `activation_height` is `None` for it on every
+network, so it never enters an activation list and the node's reported schedule is
+adopted exactly as before. Because the parsed transaction keeps `SwarmMain` and
+`branch_id()` answers `0x53574d31`, serialization is byte-exact and the ZIP-244 digests
+reach the vendored `zcash_primitives` with `BranchId::SwarmMain`, so txids match the
+node's. `zebra-chain/src/transaction/tests/vectors.rs` proves that on two live blocks of
+the production chain (block 1 and block 94, genesis `01c34428…afdd`).
