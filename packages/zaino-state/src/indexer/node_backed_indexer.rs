@@ -157,7 +157,7 @@ impl ZcashService for NodeBackedIndexerService<ZebraValidatorSource> {
         let data = ServiceMetadata::new(
             get_build_info(config.common.indexer_version.clone()),
             network.clone(),
-            config.common.network.clone(),
+            config.common.network,
             zebra_build_data.build,
             zebra_build_data.subversion,
         );
@@ -359,7 +359,7 @@ fn test_service_parts(
         ServiceMetadata::new(
             get_build_info("test".to_string()),
             network,
-            network_kind.clone(),
+            network_kind,
             "test-build".to_string(),
             "test-subversion".to_string(),
         ),
