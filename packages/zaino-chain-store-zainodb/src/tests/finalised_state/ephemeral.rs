@@ -189,6 +189,57 @@ async fn reader_compact_block_stream_matches_source() {
     assert_eq!(count, expected_count);
 }
 
+/// A passthrough store hands compact blocks over one at a time.
+///
+/// Its reads are validator round trips, one per block, and a chunk reaches the
+/// consumer only once every block in it has been fetched. A thousand-block
+/// chunk, the size a durable store reads under one transaction, kept a wallet
+/// on the SWARM production chain waiting more than twenty seconds for the
+/// first block below the finalised seam, and it gave up after fifteen. One
+/// block per chunk is the first block leaving after one round trip.
+#[tokio::test]
+async fn the_passthrough_compact_stream_hands_over_one_block_at_a_time() {
+    use crate::conversion::pool_filter_from_wire;
+    use futures::StreamExt;
+    use zaino_chain_store::CompactBlockRead;
+    use zaino_primitives::types::Height as DomainHeight;
+
+    init_tracing();
+
+    let blocks = load_test_vectors().unwrap().blocks;
+    let source = fake_validator_from_vectors(&blocks);
+    let (_db_dir, finalised_state) = spawn_ephemeral_finalised_state(source).await.unwrap();
+    let finalised_state = Arc::new(finalised_state);
+    let reader = finalised_state.to_reader();
+
+    let start_height = blocks.first().unwrap().height;
+    let end_height = blocks.last().unwrap().height;
+    assert!(
+        end_height > start_height,
+        "one block per chunk is only a claim over more than one block"
+    );
+
+    let chunks = CompactBlockRead::compact_stream(
+        &reader,
+        DomainHeight::try_from(start_height).unwrap(),
+        DomainHeight::try_from(end_height).unwrap(),
+        pool_filter_from_wire(&PoolTypeFilter::includes_all()),
+    )
+    .await
+    .unwrap();
+    let mut chunks = std::pin::pin!(chunks);
+
+    let mut heights = Vec::new();
+    while let Some(chunk) = chunks.next().await {
+        let chunk = chunk.unwrap();
+        assert_eq!(chunk.len(), 1, "a passthrough chunk holds one block");
+        heights.extend(chunk.iter().map(|block| block.height));
+    }
+
+    let expected: Vec<u32> = (start_height..=end_height).collect();
+    assert_eq!(heights, expected);
+}
+
 #[tokio::test]
 async fn reader_chain_block_and_header_identity_matches_source() {
     init_tracing();

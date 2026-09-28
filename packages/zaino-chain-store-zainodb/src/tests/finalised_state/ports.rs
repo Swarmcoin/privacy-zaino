@@ -198,6 +198,38 @@ async fn the_compact_stream_matches_the_inherent_stream() {
     assert_eq!(through_ports, expected);
 }
 
+/// A durable store still reads a compact range under one transaction per
+/// thousand blocks.
+///
+/// Only a passthrough reads one block per chunk, because it has no transaction
+/// to amortise. The vector chain is shorter than one chunk, so a durable store
+/// hands the whole range over as a single chunk.
+///
+/// multi_thread required: DbV1 reads run under `tokio::task::block_in_place`.
+#[tokio::test(flavor = "multi_thread")]
+async fn the_durable_compact_stream_reads_the_vector_range_as_one_chunk() {
+    let (data, _dir, _db, reader) = load_vectors_v1db_and_reader().await;
+    let expected: Vec<_> = indexed_block_chain(&data.blocks).collect();
+    let last = expected.last().expect("the vectors hold blocks");
+
+    let chunks = CompactBlockRead::compact_stream(
+        &reader,
+        domain(Height(0)),
+        domain(last.height()),
+        pool_filter_from_wire(&PoolTypeFilter::includes_all()),
+    )
+    .await
+    .expect("the whole vector range is below the watermark");
+    let mut chunks = std::pin::pin!(chunks);
+
+    let mut sizes = Vec::new();
+    while let Some(chunk) = chunks.next().await {
+        sizes.push(chunk.expect("no chunk fails over the vector range").len());
+    }
+
+    assert_eq!(sizes, vec![expected.len()]);
+}
+
 /// A transaction's position, and the txid at it, round-trip against the
 /// inherent location reads.
 #[tokio::test(flavor = "multi_thread")]

@@ -204,14 +204,36 @@ impl<T: ChainStoreSource> DbReader<T> {
 /// consumer must not read anything into where one ends.
 const BLOCKS_PER_READ_TRANSACTION: u32 = 1024;
 
-/// Splits `start..=end` into chunks and reads each one.
+/// How many blocks one read covers while reads are passed through to the
+/// validator: one.
+///
+/// A passthrough read holds no transaction, so a larger chunk has no
+/// per-transaction cost to amortise: the passthrough fetches a range with one
+/// validator round trip per block, and a chunk reaches the consumer only once
+/// every block in it has arrived. At `BLOCKS_PER_READ_TRANSACTION` that is a
+/// thousand round trips of silence before the first block of any range that
+/// starts below the finalised seam. On the SWARM production chain that was
+/// twenty seconds and more, and a light wallet abandons a stream after fifteen
+/// seconds without a message, so a wallet syncing from its birthday never
+/// received a block. One block per chunk sends each block as soon as it has
+/// been fetched, at the same total cost.
+const BLOCKS_PER_PASSTHROUGH_READ: u32 = 1;
+
+/// Splits `start..=end` into chunks of `blocks_per_chunk` blocks and reads each
+/// one.
 ///
 /// Sequential rather than concurrent: the chunks are contiguous and the
 /// consumer wants them in order, so overlapping reads would buy nothing and
 /// would hold several reader slots at once. The stream stops at the first
 /// error — a range with a hole in the middle is not a range.
+///
+/// Lazy: a chunk is read when the consumer asks for it and not before, so the
+/// first chunk is in the consumer's hands after one read however long the
+/// range is. The cost of one read is therefore how long a consumer waits for
+/// its first block, which is why the chunk size is the caller's to choose.
 fn chunked<B, F, Fut>(
     range: Option<(Height, Height)>,
+    blocks_per_chunk: u32,
     read: F,
 ) -> impl futures::Stream<Item = Result<Vec<B>, ChainStoreError>> + Send
 where
@@ -228,6 +250,9 @@ where
         Some((start, end)) => (Some(start), end),
         None => (None, Height(0)),
     };
+    // How far past its first height a chunk reaches. A chunk size of zero is
+    // read as one block: a chunk of no blocks would never move the cursor.
+    let reach = blocks_per_chunk.saturating_sub(1);
     // The reader travels in the unfold's state rather than being borrowed by
     // the closure: the future the closure returns outlives the call, so a
     // borrow would tie the stream's lifetime to this frame.
@@ -235,11 +260,7 @@ where
         let Some(from) = cursor else {
             return Ok(None);
         };
-        let to = Height(
-            from.0
-                .saturating_add(BLOCKS_PER_READ_TRANSACTION - 1)
-                .min(end.0),
-        );
+        let to = Height(from.0.saturating_add(reach).min(end.0));
         let chunk = read(from, to).await?;
         let next = (to.0 < end.0).then(|| Height(to.0 + 1));
         Ok(Some((chunk, (next, read))))
@@ -285,6 +306,23 @@ impl<T: ChainStoreSource> DbReader<T> {
             stored_height(start),
             stored_height(end.min(tip.height)),
         )))
+    }
+
+    /// How many blocks each chunk of a chunked read covers.
+    ///
+    /// Decided by where the answers come from, because that is what a chunk
+    /// costs: committed rows are read under one transaction per chunk, while a
+    /// passthrough pays one validator round trip per block whatever the chunk
+    /// size. See `BLOCKS_PER_PASSTHROUGH_READ`.
+    ///
+    /// Read once, when a stream is built. A store that comes online part-way
+    /// through a long stream keeps the chunk size the stream started with,
+    /// which costs speed and nothing else: chunk boundaries carry no meaning.
+    fn blocks_per_chunk(&self) -> u32 {
+        match self.inner.watermark().provenance {
+            zaino_chain_store::Provenance::Durable => BLOCKS_PER_READ_TRANSACTION,
+            zaino_chain_store::Provenance::Passthrough => BLOCKS_PER_PASSTHROUGH_READ,
+        }
     }
 }
 
@@ -474,7 +512,8 @@ impl<T: ChainStoreSource> StoredBlockRead for DbReader<T> {
         ChainStoreError,
     > {
         let reader = self.clone();
-        Ok(chunked(self.clamped_range(start, end)?, move |from, to| {
+        let range = self.clamped_range(start, end)?;
+        Ok(chunked(range, self.blocks_per_chunk(), move |from, to| {
             let reader = reader.clone();
             async move {
                 reader
@@ -520,7 +559,8 @@ impl<T: ChainStoreSource> CompactBlockRead for DbReader<T> {
         ChainStoreError,
     > {
         let reader = self.clone();
-        Ok(chunked(self.clamped_range(start, end)?, move |from, to| {
+        let range = self.clamped_range(start, end)?;
+        Ok(chunked(range, self.blocks_per_chunk(), move |from, to| {
             let reader = reader.clone();
             async move {
                 DbReader::get_compact_block_range(&reader, from, to, pools)
@@ -638,5 +678,97 @@ mod tests {
         service::<FinalisedState<Validator>>();
         #[cfg(feature = "transparent_address_history_experimental")]
         history::<DbReader<Validator>>();
+    }
+
+    /// What a `chunked` test's reader was asked for: one `(from, to)` per read,
+    /// in the order the reads happened.
+    type ReadLog = std::sync::Arc<std::sync::Mutex<Vec<(u32, u32)>>>;
+
+    /// Records one read.
+    fn record(log: &ReadLog, from: Height, to: Height) {
+        let mut reads = log.lock().expect("the read log is not poisoned");
+        reads.push((from.0, to.0));
+    }
+
+    /// Every read recorded so far.
+    fn recorded(log: &ReadLog) -> Vec<(u32, u32)> {
+        log.lock().expect("the read log is not poisoned").clone()
+    }
+
+    /// The heights `from..=to`, which is what a read over them answers here.
+    fn heights_in(from: Height, to: Height) -> Vec<u32> {
+        (from.0..=to.0).collect()
+    }
+
+    /// A `chunked` stream over `range` whose reads are recorded in `log`.
+    fn recording_stream(
+        range: Option<(Height, Height)>,
+        blocks_per_chunk: u32,
+        log: &ReadLog,
+    ) -> impl futures::Stream<Item = Result<Vec<u32>, ChainStoreError>> + Send {
+        let log = std::sync::Arc::clone(log);
+        chunked(range, blocks_per_chunk, move |from, to| {
+            record(&log, from, to);
+            std::future::ready(Ok::<_, ChainStoreError>(heights_in(from, to)))
+        })
+    }
+
+    /// A chunked read covers its range in chunks of the size it was given, the
+    /// last one short, and hands over every height once, in order.
+    #[tokio::test]
+    async fn a_chunked_read_covers_its_range_in_chunks_of_the_given_size() {
+        let log = ReadLog::default();
+        let stream = recording_stream(
+            Some((Height(0), Height(2500))),
+            BLOCKS_PER_READ_TRANSACTION,
+            &log,
+        );
+
+        let chunks: Vec<_> = futures::StreamExt::collect(stream).await;
+        let heights: Vec<u32> = chunks
+            .into_iter()
+            .flat_map(|chunk| chunk.expect("no read fails"))
+            .collect();
+
+        assert_eq!(heights, (0..=2500).collect::<Vec<u32>>());
+        let expected_reads = vec![(0, 1023), (1024, 2047), (2048, 2500)];
+        assert_eq!(recorded(&log), expected_reads);
+    }
+
+    /// A chunk is read when the consumer asks for it and not before, so a
+    /// one-block chunk is in the consumer's hands after one read, however long
+    /// the range behind it. This is the property a passthrough store's first
+    /// block depends on.
+    #[tokio::test]
+    async fn a_one_block_chunk_is_handed_over_before_the_next_is_read() {
+        let log = ReadLog::default();
+        let stream = recording_stream(
+            Some((Height(5), Height(9))),
+            BLOCKS_PER_PASSTHROUGH_READ,
+            &log,
+        );
+        let mut stream = std::pin::pin!(stream);
+
+        let first = futures::StreamExt::next(&mut stream).await;
+        let first = first.map(|chunk| chunk.expect("no read fails"));
+        assert_eq!(first, Some(vec![5]));
+        assert_eq!(recorded(&log), vec![(5, 5)]);
+
+        while futures::StreamExt::next(&mut stream).await.is_some() {}
+        let expected_reads = vec![(5, 5), (6, 6), (7, 7), (8, 8), (9, 9)];
+        assert_eq!(recorded(&log), expected_reads);
+    }
+
+    /// A chunk size of zero is read as one block, not as a chunk that never
+    /// moves the cursor.
+    #[tokio::test]
+    async fn a_zero_block_chunk_is_read_as_one_block() {
+        let log = ReadLog::default();
+        let stream = recording_stream(Some((Height(0), Height(2))), 0, &log);
+
+        let chunks: Vec<_> = futures::StreamExt::collect(stream).await;
+
+        assert_eq!(chunks.len(), 3);
+        assert_eq!(recorded(&log), vec![(0, 0), (1, 1), (2, 2)]);
     }
 }
