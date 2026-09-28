@@ -110,6 +110,15 @@ jobs:
           RUST_MIN_STACK: 2097152
         run: cargo test --locked -p zaino-chain-head-service reorg_depth -- --nocapture
 
+      # The first-sync fix (2026-09-28): with ephemeral_finalised_state = true the
+      # finalised state is a passthrough to the validator, and GetBlockRange used
+      # to gather a 1,024-block chunk of it before sending the first block. The
+      # store now reads one block per chunk in passthrough and keeps 1,024 for
+      # its own LMDB rows; these are the tests that say so. --lib, because one of
+      # the crate's doctests has not compiled since 93d44251 (2026-08-26).
+      - name: Test the finalised-state store and its block streams
+        run: cargo test --locked -p zaino-chain-store-zainodb --lib
+
       - name: Build zainod
         run: cargo build --locked --release --package zainod --bin zainod
 
