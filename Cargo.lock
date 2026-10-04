@@ -5940,7 +5940,7 @@ dependencies = [
  "zaino-status",
  "zcash_primitives",
  "zcash_protocol",
- "zebra-chain",
+ "zebra-chain 13.0.1",
  "zebra-rpc",
 ]
 
@@ -5954,7 +5954,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "tracing-tree",
- "zebra-chain",
+ "zebra-chain 13.0.1",
 ]
 
 [[package]]
@@ -5983,7 +5983,7 @@ dependencies = [
  "thiserror 2.0.18",
  "zaino-consensus",
  "zaino-primitives",
- "zebra-chain",
+ "zebra-chain 13.0.1",
 ]
 
 [[package]]
@@ -6039,7 +6039,7 @@ dependencies = [
  "tonic-prost",
  "tonic-prost-build",
  "which",
- "zebra-chain",
+ "zebra-chain 13.0.1",
  "zebra-state",
 ]
 
@@ -6081,7 +6081,7 @@ dependencies = [
  "zaino-source",
  "zaino-state",
  "zaino-status",
- "zebra-chain",
+ "zebra-chain 13.0.1",
  "zebra-rpc",
 ]
 
@@ -6127,7 +6127,7 @@ dependencies = [
  "zaino-convert-zebra",
  "zaino-primitives",
  "zaino-source",
- "zebra-chain",
+ "zebra-chain 13.0.1",
  "zebra-rpc",
  "zebra-state",
 ]
@@ -6149,7 +6149,7 @@ dependencies = [
  "zaino-rpc",
  "zaino-source",
  "zcash_primitives",
- "zebra-chain",
+ "zebra-chain 13.0.1",
 ]
 
 [[package]]
@@ -6209,7 +6209,7 @@ dependencies = [
  "zcash_keys",
  "zcash_protocol",
  "zcash_transparent",
- "zebra-chain",
+ "zebra-chain 13.0.1",
  "zebra-rpc",
  "zebra-state",
 ]
@@ -6475,6 +6475,71 @@ dependencies = [
  "num-integer",
  "orchard",
  "primitive-types 0.12.2",
+ "rand_core 0.6.4",
+ "rayon",
+ "reddsa",
+ "redjubjub",
+ "ripemd 0.1.3",
+ "sapling-crypto",
+ "schemars 1.2.1",
+ "secp256k1",
+ "serde",
+ "serde-big-array",
+ "serde_json",
+ "serde_with",
+ "sha2 0.10.9",
+ "sinsemilla",
+ "static_assertions",
+ "strum",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
+ "tracing",
+ "uint 0.10.0",
+ "x25519-dalek",
+ "zcash_address",
+ "zcash_encoding",
+ "zcash_history",
+ "zcash_note_encryption",
+ "zcash_primitives",
+ "zcash_protocol",
+ "zcash_script",
+ "zcash_transparent",
+]
+
+[[package]]
+name = "zebra-chain"
+version = "13.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6cbe2bf819b44f24b55c80f22dc59dee6ce4055c489de87f1a83503e27a992c6"
+dependencies = [
+ "bech32",
+ "bitflags 2.13.0",
+ "bitflags-serde-legacy",
+ "bitvec",
+ "blake2b_simd",
+ "blake2s_simd",
+ "bounded-vec",
+ "bs58",
+ "byteorder",
+ "chrono",
+ "derive-getters",
+ "dirs",
+ "ed25519-zebra",
+ "equihash",
+ "futures",
+ "group",
+ "halo2_proofs",
+ "hex",
+ "humantime",
+ "incrementalmerkletree",
+ "itertools 0.14.0",
+ "jubjub",
+ "lazy_static",
+ "nonempty",
+ "num-integer",
+ "orchard",
+ "primitive-types 0.12.2",
  "proptest",
  "proptest-derive",
  "rand 0.8.6",
@@ -6489,7 +6554,6 @@ dependencies = [
  "secp256k1",
  "serde",
  "serde-big-array",
- "serde_json",
  "serde_with",
  "sha2 0.10.9",
  "sinsemilla",
@@ -6549,7 +6613,7 @@ dependencies = [
  "zcash_protocol",
  "zcash_script",
  "zcash_transparent",
- "zebra-chain",
+ "zebra-chain 12.0.0",
  "zebra-node-services",
  "zebra-script",
  "zebra-state",
@@ -6590,7 +6654,7 @@ dependencies = [
  "tracing",
  "tracing-error",
  "tracing-futures",
- "zebra-chain",
+ "zebra-chain 12.0.0",
 ]
 
 [[package]]
@@ -6606,7 +6670,7 @@ dependencies = [
  "serde_json",
  "tokio",
  "tower 0.4.13",
- "zebra-chain",
+ "zebra-chain 12.0.0",
 ]
 
 [[package]]
@@ -6662,7 +6726,7 @@ dependencies = [
  "zcash_protocol",
  "zcash_script",
  "zcash_transparent",
- "zebra-chain",
+ "zebra-chain 12.0.0",
  "zebra-consensus",
  "zebra-network",
  "zebra-node-services",
@@ -6681,7 +6745,7 @@ dependencies = [
  "thiserror 2.0.18",
  "zcash_primitives",
  "zcash_script",
- "zebra-chain",
+ "zebra-chain 12.0.0",
 ]
 
 [[package]]
@@ -6719,7 +6783,7 @@ dependencies = [
  "tokio",
  "tower 0.4.13",
  "tracing",
- "zebra-chain",
+ "zebra-chain 12.0.0",
  "zebra-node-services",
 ]
 
