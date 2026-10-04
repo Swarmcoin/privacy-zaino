@@ -41,7 +41,7 @@ zcash_address = { workspace = true }
 zcash_keys = { workspace = true, features = ["sapling"] }
 zcash_protocol = { workspace = true }
 zcash_transparent = { workspace = true }
-sapling-crypto = "0.7"
+sapling-crypto = "0.8"
 
 # Zebra
 zebra-chain = { workspace = true }

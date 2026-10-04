@@ -47,7 +47,7 @@ license = "Apache-2.0"
 
 # Librustzcash
 incrementalmerkletree = "0.8"
-sapling-crypto = "0.7"
+sapling-crypto = "0.8"
 zcash_address = "0.13"
 zcash_keys = "0.16"
 zcash_protocol = "0.10"
