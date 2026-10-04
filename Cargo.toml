@@ -46,7 +46,7 @@ license = "Apache-2.0"
 [workspace.dependencies]
 
 # Librustzcash
-incrementalmerkletree = "0.8"
+incrementalmerkletree = "0.9"
 sapling-crypto = "0.7"
 zcash_address = "0.13"
 zcash_keys = "0.16"

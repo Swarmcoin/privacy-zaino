@@ -2117,6 +2117,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "incrementalmerkletree"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c3b0c166f7f34e02988f84a7bed22be9707b1569acc6aeb3afaf34152d0e0400"
+dependencies = [
+ "either",
+]
+
+[[package]]
 name = "indenter"
 version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2878,7 +2887,7 @@ dependencies = [
  "halo2_poseidon",
  "halo2_proofs",
  "hex",
- "incrementalmerkletree",
+ "incrementalmerkletree 0.8.2",
  "lazy_static",
  "memuse",
  "nonempty",
@@ -4028,7 +4037,7 @@ dependencies = [
  "getset",
  "group",
  "hex",
- "incrementalmerkletree",
+ "incrementalmerkletree 0.8.2",
  "jubjub",
  "lazy_static",
  "memuse",
@@ -6137,7 +6146,7 @@ name = "zaino-source-zebra-rpc"
 version = "0.2.0"
 dependencies = [
  "hex",
- "incrementalmerkletree",
+ "incrementalmerkletree 0.9.0",
  "sapling-crypto",
  "serde",
  "serde_json",
@@ -6164,7 +6173,7 @@ dependencies = [
  "dashmap",
  "futures",
  "hex",
- "incrementalmerkletree",
+ "incrementalmerkletree 0.9.0",
  "indexmap 2.14.0",
  "metrics",
  "primitive-types 0.14.0",
@@ -6339,7 +6348,7 @@ dependencies = [
  "equihash",
  "ff",
  "hex",
- "incrementalmerkletree",
+ "incrementalmerkletree 0.8.2",
  "jubjub",
  "memuse",
  "nonempty",
@@ -6468,7 +6477,7 @@ dependencies = [
  "halo2_proofs",
  "hex",
  "humantime",
- "incrementalmerkletree",
+ "incrementalmerkletree 0.8.2",
  "itertools 0.14.0",
  "jubjub",
  "lazy_static",
