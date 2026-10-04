@@ -85,7 +85,7 @@ reqwest = { version = "0.13", default-features = false, features = [
     "rustls-no-provider",
     "webpki-roots",
 ] }
-tower = { version = "0.4", features = ["buffer", "util"] }
+tower = { version = "0.5", features = ["buffer", "util"] }
 tonic = { version = "0.14" }
 prost = "0.14"
 serde = "1.0"
