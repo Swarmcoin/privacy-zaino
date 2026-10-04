@@ -90,7 +90,7 @@ tonic = { version = "0.14" }
 prost = "0.14"
 serde = "1.0"
 serde_json = "1.0"
-jsonrpsee = { version = "0.24", features = ["server", "macros"] }
+jsonrpsee = { version = "0.26", features = ["server", "macros"] }
 
 # Hashmaps, channels, DBs
 indexmap = "2.2.6"
